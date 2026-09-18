@@ -1,0 +1,75 @@
+# Python bytecode and tool caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments and packaging output
+.venv/
+venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Local training data (keep data/labels.csv under version control)
+data/images/
+data/raw/
+data/processed/
+
+# Image files are kept locally and never uploaded to this repository
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.tif
+*.tiff
+*.webp
+
+# Training runs, checkpoints, and exported models
+runs/
+checkpoints/
+wandb/
+mlruns/
+lightning_logs/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.tflite
+
+# Realtime inspection input, output, and state
+runtime/inbox/*
+runtime/results/*
+runtime/state/*
+!runtime/inbox/.gitkeep
+!runtime/results/.gitkeep
+!runtime/state/.gitkeep
+
+# Logs and temporary files
+*.log
+*.tmp
+/--image
+/--sample-id
+output/
+tmp/
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

@@ -1,0 +1,83 @@
+# 이 파일의 TODO 항목은 촬영/라벨링/검증 데이터가 준비된 뒤 확정해야 합니다.
+seed: 42
+device: cuda                 # auto | cpu | cuda
+
+defect_classes:
+  - id: shrinkage
+    name_ko: 수축불량
+  - id: thread_defect
+    name_ko: 나사선 불량
+  - id: incomplete_molding
+    name_ko: 미성형 불량
+  - id: burr
+    name_ko: burr 불량
+  - id: contamination
+    name_ko: 이염 불량
+
+input:
+  # 한 번의 학습/추론마다 상단면 또는 측면 사진 한 장만 독립적으로 처리합니다.
+  image_size: 512            # 작은 burr 보존을 위해 고해상도 입력 사용
+  padding_value: [0, 0, 0]
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+model:
+  architecture: convnext_small
+  pretrained: true
+  dropout: 0.20
+  # 하나의 head가 결함마다 독립적인 logit을 출력하고 sigmoid로 defect_score를 만듭니다.
+
+train:
+  manifest: data/labels.csv
+  output_dir: runs
+  batch_size: 8
+  epochs: 30
+  num_workers: 0             # Windows에서는 0부터 시작 권장
+  learning_rate: 0.0001
+  backbone_learning_rate: 0.00001
+  weight_decay: 0.01
+  positive_class_weighting: auto  # auto: 결함별 BCE pos_weight를 train 빈도로 계산 | none
+  freeze_backbone_epochs: 3
+  early_stopping_patience: 7
+  # threshold와 무관한 validation loss가 가장 낮은 epoch를 best.pt로 선택합니다.
+  checkpoint_metric: loss
+  checkpoint_mode: min
+  mixed_precision: true
+  augmentation:
+    rotation_degrees: 5
+    translate_fraction: 0.03
+    brightness: 0.05
+    contrast: 0.05
+    saturation: 0.02         # 이염 신호를 훼손하지 않도록 강한 색 증강 금지
+
+decision:
+  # 이 설정은 Watch Folder의 최종 OK/NG 판정에서만 사용됩니다.
+  criteria_version: TODO-v0    # TODO: 현장 판정 threshold 확정 후 버전 변경
+  # 낮출수록 불량을 민감하게 잡고, 높일수록 둔감하게 판정합니다.
+  # 학습 loss, best.pt 선택, 조기 종료에는 영향을 주지 않습니다.
+  defect_score_thresholds:
+    shrinkage: 0.9468
+    thread_defect: 0.9900
+    incomplete_molding: 0.9990
+    burr: 0.9794
+    contamination: 0.9953
+
+inference:
+  checkpoint: runs/best.pt   # 학습 후 생성되는 체크포인트 경로로 수정
+  use_amp: true
+  warmup_iterations: 2
+
+realtime:
+  inbox_dir: runtime/inbox
+  results_dir: runtime/results
+  inspections_file: runtime/state/inspections.json
+  camera_count: 4
+  poll_interval_s: 0.20
+  stable_checks: 3           # 크기/mtime이 연속으로 동일해야 읽음
+  retry_errors: false
+  retry_backoff_s: 5.0
+  max_retry_attempts: 3
+  # inspection_id에는 영문/숫자/_/-만 허용하여 경로 충돌을 방지합니다.
+  filename_regex: "^(?P<id>[A-Za-z0-9_-]+)\\.(?P<ext>jpg|jpeg|png|bmp|tif|tiff)$"
+  # capture_cameras.py의 ..._object_0001_camera_1.png 형식을 한 제품으로 묶습니다.
+  cycle_regex: "^.*object_(?P<cycle>[0-9]+)_camera_(?P<camera>[1-4])$"
